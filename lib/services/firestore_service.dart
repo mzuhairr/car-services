@@ -13,10 +13,17 @@ class FirestoreService {
         .toList();
   }
 
-  Future<void> addInsuranceCompany(InsuranceCompany company) async {
-    await _firestore.collection('InsuranceCompany').add(company.toMap());
+  Future<DocumentReference> addInsuranceCompany(
+      InsuranceCompany company) async {
+    // await _firestore.collection('InsuranceCompany').add(company.toMap());
+    return await FirebaseFirestore.instance
+        .collection('InsuranceCompany')
+        .add(company.toMap());
   }
 
+// Future<DocumentReference> addInsuranceCompany(InsuranceCompany company) async {
+
+// }
   // User Management
   Future<UserModel?> getUser(String uid) async {
     final doc = await _firestore.collection('users').doc(uid).get();

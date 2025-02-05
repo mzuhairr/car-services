@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
 import '../../models/insurance_company.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ManageCompaniesPage extends StatefulWidget {
   const ManageCompaniesPage({super.key});
@@ -16,10 +17,14 @@ class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
   final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _searchController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   @override
   void dispose() {
     _searchController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
@@ -143,31 +148,96 @@ class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
                 decoration: const InputDecoration(labelText: 'Description'),
                 maxLines: 3,
               ),
+              TextField(
+                controller: _emailController,
+                decoration: const InputDecoration(labelText: 'Email'),
+                keyboardType: TextInputType.emailAddress,
+              ),
+              TextField(
+                controller: _passwordController,
+                decoration: const InputDecoration(labelText: 'Password'),
+                obscureText: true,
+              ),
             ],
           ),
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () {
+              _nameController.clear();
+              _locationController.clear();
+              _descriptionController.clear();
+              _emailController.clear();
+              _passwordController.clear();
+              Navigator.pop(context);
+            },
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () async {
               if (_nameController.text.isNotEmpty &&
-                  _locationController.text.isNotEmpty) {
-                await _firestoreService.addInsuranceCompany(
-                  InsuranceCompany(
-                    name: _nameController.text,
-                    location: _locationController.text,
-                    description: _descriptionController.text,
+                  _locationController.text.isNotEmpty &&
+                  _emailController.text.isNotEmpty &&
+                  _passwordController.text.isNotEmpty) {
+                try {
+                  final companyDoc =
+                      await _firestoreService.addInsuranceCompany(
+                    InsuranceCompany(
+                      name: _nameController.text,
+                      location: _locationController.text,
+                      description: _descriptionController.text,
+                    ),
+                  );
+
+                  final userCredential = await FirebaseAuth.instance
+                      .createUserWithEmailAndPassword(
+                    email: _emailController.text,
+                    password: _passwordController.text,
+                  );
+
+                  await FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(userCredential.user!.uid)
+                      .set({
+                    'name': _nameController.text,
+                    'email': _emailController.text,
+                    'isCompany': true,
+                    'insuranceCompanyId': companyDoc.id,
+                    'createdAt': FieldValue.serverTimestamp(),
+                  });
+
+                  if (mounted) {
+                    Navigator.pop(context);
+                    _nameController.clear();
+                    _locationController.clear();
+                    _descriptionController.clear();
+                    _emailController.clear();
+                    _passwordController.clear();
+
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Insurance company created successfully'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Please fill in all required fields'),
+                    backgroundColor: Colors.red,
                   ),
                 );
-                if (mounted) {
-                  Navigator.pop(context);
-                  _nameController.clear();
-                  _locationController.clear();
-                  _descriptionController.clear();
-                }
               }
             },
             child: const Text('Add'),

@@ -7,6 +7,7 @@ class UserModel {
   final bool isAdmin;
   final String insuranceCompanyId;
   final DateTime? createdAt;
+  final bool isCompany;
 
   UserModel({
     required this.uid,
@@ -15,6 +16,7 @@ class UserModel {
     required this.insuranceCompanyId,
     this.isAdmin = false,
     this.createdAt,
+    this.isCompany = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -25,6 +27,7 @@ class UserModel {
       'insuranceCompanyId': insuranceCompanyId,
       'isAdmin': isAdmin,
       'createdAt': createdAt ?? FieldValue.serverTimestamp(),
+      'isCompany': isCompany,
     };
   }
 
@@ -35,6 +38,7 @@ class UserModel {
       name: map['name'] ?? '',
       insuranceCompanyId: map['insuranceCompanyId'] ?? '',
       isAdmin: map['isAdmin'] ?? false,
+      isCompany: map['isCompany'] ?? false,
       createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
     );
   }

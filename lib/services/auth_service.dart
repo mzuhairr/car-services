@@ -11,6 +11,36 @@ class AuthService {
 
   User? getCurrentUser() => _auth.currentUser;
 
+  Future<Map<String, dynamic>?> getInsuranceCompanyData(
+      String? companyId) async {
+    if (companyId == null) return null;
+
+    try {
+      final doc =
+          await _firestore.collection('InsuranceCompany').doc(companyId).get();
+
+      if (doc.exists) {
+        return doc.data();
+      }
+      return null;
+    } catch (e) {
+      print('Error getting company data: $e');
+      return null;
+    }
+  }
+
+  Future<void> updateInsuranceCompanyCustomers(
+      String? companyId, String? userId) async {
+    if (companyId == null || userId == null) return;
+
+    await FirebaseFirestore.instance
+        .collection('InsuranceCompany')
+        .doc(companyId)
+        .update({
+      'customers': FieldValue.arrayUnion([userId])
+    });
+  }
+
   Future<Map<String, dynamic>?> getUserData() async {
     final user = _auth.currentUser;
     if (user != null) {

@@ -3,6 +3,7 @@ import '../../services/auth_service.dart';
 import '../../widgets/auth/auth_text_field.dart';
 import '../home/home_page.dart';
 import 'register_page.dart';
+import '../InsuranceCompany/InsuraceComanyDashboard.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,12 +25,40 @@ class _LoginPageState extends State<LoginPage> {
       );
       if (mounted) {
         final userData = await _authService.getUserData();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-              builder: (context) =>
-                  HomePage(title: 'Welcome ${userData?['name'] ?? 'User'}')),
-        );
+        print('User Data: $userData');
+
+        if (userData?['isCompany'] == true) {
+          print('Is Company Account - Getting company data');
+          final companyData = await _authService
+              .getInsuranceCompanyData(userData?['insuranceCompanyId']);
+          print('Company Data: $companyData');
+
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => InsuranceCompanyDashboard(
+                  companyName: userData?['name'] ?? 'Company',
+                  companyData: companyData,
+                ),
+              ),
+            );
+          }
+        } else {
+          print('Regular User Account');
+          if (userData?['insuranceCompanyId'] != null) {
+            await _authService.updateInsuranceCompanyCustomers(
+                userData?['insuranceCompanyId'], userData?['uid']);
+          }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomePage(
+                title: 'Welcome ${userData?['name'] ?? 'User'}',
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -45,13 +74,32 @@ class _LoginPageState extends State<LoginPage> {
       await _authService.signInWithGoogle();
       if (mounted) {
         final userData = await _authService.getUserData();
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                HomePage(title: 'Welcome ${userData?['name'] ?? 'User'}'),
-          ),
-        );
+        if (userData?['isCompany'] == true) {
+          final companyData =
+              await _authService.getInsuranceCompanyData(userData?['uid']);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => InsuranceCompanyDashboard(
+                companyName: userData?['name'] ?? 'Company',
+                companyData: companyData,
+              ),
+            ),
+          );
+        } else {
+          if (userData?['insuranceCompanyId'] != null) {
+            await _authService.updateInsuranceCompanyCustomers(
+                userData?['insuranceCompanyId'], userData?['uid']);
+          }
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => HomePage(
+                title: 'Welcome ${userData?['name'] ?? 'User'}',
+              ),
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
