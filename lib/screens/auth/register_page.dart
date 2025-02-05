@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import '../../models/insurance_company.dart';
+import '../../services/firestore_service.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -16,6 +17,28 @@ class _RegisterPageState extends State<RegisterPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   InsuranceCompany? selectedCompany;
+  final FirestoreService _firestoreService = FirestoreService();
+  List<InsuranceCompany> insuranceCompanies = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInsuranceCompanies();
+  }
+
+  Future<void> _loadInsuranceCompanies() async {
+    try {
+      final companies = await _firestoreService.getInsuranceCompanies();
+      setState(() {
+        insuranceCompanies = companies;
+        _isLoading = false;
+      });
+    } catch (e) {
+      // Handle error
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,130 +47,132 @@ class _RegisterPageState extends State<RegisterPage> {
         title: const Text('Registration'),
         backgroundColor: Colors.green,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextFormField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your name';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  border: OutlineInputBorder(),
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(
-                  labelText: 'Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your password';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _confirmPasswordController,
-                decoration: const InputDecoration(
-                  labelText: 'Confirm Password',
-                  border: OutlineInputBorder(),
-                ),
-                obscureText: true,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please confirm your password';
-                  }
-                  if (value != _passwordController.text) {
-                    return 'Passwords do not match';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              DropdownSearch<InsuranceCompany>(
-                items: insuranceCompanies,
-                itemAsString: (InsuranceCompany company) => company.name,
-                onChanged: (InsuranceCompany? company) {
-                  setState(() {
-                    selectedCompany = company;
-                  });
-                },
-                dropdownDecoratorProps: const DropDownDecoratorProps(
-                  dropdownSearchDecoration: InputDecoration(
-                    labelText: "Select Insurance Company",
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                popupProps: PopupProps.menu(
-                  showSearchBox: true,
-                  searchFieldProps: const TextFieldProps(
-                    decoration: InputDecoration(
-                      hintText: "Search insurance company",
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Name',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your name';
+                        }
+                        return null;
+                      },
                     ),
-                  ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _emailController,
+                      decoration: const InputDecoration(
+                        labelText: 'Email',
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your email';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _passwordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter your password';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Confirm Password',
+                        border: OutlineInputBorder(),
+                      ),
+                      obscureText: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please confirm your password';
+                        }
+                        if (value != _passwordController.text) {
+                          return 'Passwords do not match';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    DropdownSearch<InsuranceCompany>(
+                      items: insuranceCompanies,
+                      itemAsString: (InsuranceCompany company) => company.name,
+                      onChanged: (InsuranceCompany? company) {
+                        setState(() {
+                          selectedCompany = company;
+                        });
+                      },
+                      dropdownDecoratorProps: const DropDownDecoratorProps(
+                        dropdownSearchDecoration: InputDecoration(
+                          labelText: "Select Insurance Company",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      popupProps: PopupProps.menu(
+                        showSearchBox: true,
+                        searchFieldProps: const TextFieldProps(
+                          decoration: InputDecoration(
+                            hintText: "Search insurance company",
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        onPressed: () {
+                          if (_formKey.currentState!.validate() &&
+                              selectedCompany != null) {
+                            // TODO: Register user with selected company
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Registration successful!')),
+                            );
+                            Navigator.pop(context);
+                          } else if (selectedCompany == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text(
+                                      'Please select an insurance company')),
+                            );
+                          }
+                        },
+                        child: const Text('Register',
+                            style: TextStyle(color: Colors.white)),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate() &&
-                        selectedCompany != null) {
-                      // TODO: Register user with selected company
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('Registration successful!')),
-                      );
-                      Navigator.pop(context);
-                    } else if (selectedCompany == null) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content:
-                                Text('Please select an insurance company')),
-                      );
-                    }
-                  },
-                  child: const Text('Register',
-                      style: TextStyle(color: Colors.white)),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

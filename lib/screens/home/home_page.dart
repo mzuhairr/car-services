@@ -3,6 +3,8 @@ import '../../services/auth_service.dart';
 import '../auth/login_page.dart';
 import '../appointment/appointment_booking.dart';
 import '../../models/insurance_company.dart';
+import '../../services/firestore_service.dart';
+import '../adminpage/manage_users.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -16,6 +18,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final _authService = AuthService();
   late InsuranceCompany userInsuranceCompany;
+  final _firestoreService = FirestoreService();
 
   @override
   void initState() {
@@ -85,6 +88,25 @@ class _HomePageState extends State<HomePage> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
+          FutureBuilder<bool>(
+            future: _firestoreService
+                .isUserAdmin(_authService.currentUser?.uid ?? ''),
+            builder: (context, snapshot) {
+              if (snapshot.data == true) {
+                return IconButton(
+                  icon: const Icon(Icons.admin_panel_settings),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) => ManageUsersPage()),
+                    );
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: _signOut,
@@ -130,13 +152,13 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  userInsuranceCompany.description,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 14,
-                  ),
-                ),
+                // Text(
+                //   userInsuranceCompany.description,
+                //   style: const TextStyle(
+                //     color: Colors.black87,
+                //     fontSize: 14,
+                //   ),
+                // ),
               ],
             ),
           ),

@@ -1,15 +1,37 @@
 class InsuranceCompany {
+  final String? id;
   final String name;
+  final String? description;
   final String location;
-  final String description;
   final Map<String, Map<String, double>> servicesPricing;
 
   InsuranceCompany({
+    this.id,
     required this.name,
+    this.description,
     required this.location,
-    required this.description,
     this.servicesPricing = const {},
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'description': description,
+      'location': location,
+      'servicesPricing': servicesPricing,
+    };
+  }
+
+  factory InsuranceCompany.fromMap(String id, Map<String, dynamic> map) {
+    return InsuranceCompany(
+      id: id,
+      name: map['name'] ?? '',
+      description: map['description'],
+      location: map['location'] ?? '',
+      servicesPricing:
+          Map<String, Map<String, double>>.from(map['servicesPricing'] ?? {}),
+    );
+  }
 }
 
 // Demo insurance companies

@@ -5,6 +5,8 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final GoogleSignIn _googleSignIn = GoogleSignIn();
 
+  User? get currentUser => _auth.currentUser;
+
   Future<UserCredential> signIn(String email, String password) async {
     try {
       return await _auth.signInWithEmailAndPassword(
