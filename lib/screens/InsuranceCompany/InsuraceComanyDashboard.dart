@@ -3,6 +3,7 @@ import '../../services/auth_service.dart';
 import '../../services/firestore_service.dart';
 import '../auth/login_page.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../../models/insurance_company.dart';
 
 class AppointmentCard extends StatelessWidget {
   final Map<String, dynamic> appointment;
@@ -47,6 +48,8 @@ class CustomerListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (customerId.isEmpty) return const SizedBox();
+
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return FutureBuilder<DocumentSnapshot>(
       future:
@@ -90,6 +93,202 @@ class InsuranceCompanyDashboard extends StatefulWidget {
 class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard> {
   final _authService = AuthService();
   bool _isDarkMode = true;
+  late Map<String, dynamic> _companyData;
+
+  @override
+  void initState() {
+    super.initState();
+    _companyData = Map<String, dynamic>.from(widget.companyData ?? {});
+  }
+
+  final Map<String, List<String>> carServices = {
+    'General Repairs': [
+      'Engine Repair',
+      'Transmission Service',
+      'Brake Service',
+      'Oil Change',
+      'Battery Service',
+      'AC Service',
+    ],
+    'Body Repairs': [
+      'Bumper Repair',
+      'Bumper Replacement',
+      'Scratch Painting',
+      'Dent Removal',
+      'Panel Replacement',
+      'Paint Touch-up',
+    ],
+    'Tire Services': [
+      'Tire Rotation',
+      'Tire Replacement',
+      'Wheel Alignment',
+      'Tire Balancing',
+      'Flat Tire Repair',
+      'Tire Pressure Check',
+    ],
+  };
+
+  Future<void> _updateServicePrice(String serviceName, double newPrice) async {
+    try {
+      final currentUser = _authService.getCurrentUser();
+      if (currentUser == null) {
+        throw Exception('No authenticated user found');
+      }
+
+      // Get user data from Firestore to get the insuranceCompanyId
+      final userData = await _authService.getUserData();
+      final companyId = userData?['insuranceCompanyId'];
+
+      if (companyId == null) {
+        throw Exception('No company ID found for user');
+      }
+
+      final companyDoc = FirebaseFirestore.instance
+          .collection('InsuranceCompany')
+          .doc(companyId);
+
+      // First check if the document exists
+      final docSnapshot = await companyDoc.get();
+
+      if (!docSnapshot.exists) {
+        // If document doesn't exist, create it with initial data
+        await companyDoc.set({
+          'name': widget.companyName,
+          'servicesPricing': {
+            serviceName: newPrice,
+          },
+          'appointments': [],
+          'customers': []
+        });
+      } else {
+        // If document exists, update it
+        await companyDoc.update({
+          'servicesPricing.$serviceName': newPrice,
+        });
+      }
+
+      // After successful update, update the local state
+      setState(() {
+        if (_companyData['servicesPricing'] == null) {
+          _companyData['servicesPricing'] = {};
+        }
+        _companyData['servicesPricing'][serviceName] = newPrice;
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Price updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error updating price: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildServicePricingSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Service Pricing',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: _isDarkMode ? Colors.white : Colors.black87,
+              ),
+        ),
+        const SizedBox(height: 16),
+        ...carServices.entries.map((category) => Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  category.key,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: _isDarkMode ? Colors.white70 : Colors.black87,
+                        fontWeight: FontWeight.bold,
+                      ),
+                ),
+                const SizedBox(height: 8),
+                ...category.value.map((service) => Card(
+                      color: _isDarkMode ? Colors.grey[800] : Colors.white,
+                      child: ListTile(
+                        title: Text(
+                          service,
+                          style: TextStyle(
+                            color: _isDarkMode ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '\$${(_companyData['servicesPricing']?[service] ?? 0).toStringAsFixed(2)}',
+                              style: TextStyle(
+                                color: _isDarkMode
+                                    ? Colors.white70
+                                    : Colors.black87,
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                Icons.edit,
+                                color: _isDarkMode
+                                    ? Colors.white70
+                                    : Colors.black54,
+                              ),
+                              onPressed: () async {
+                                final controller = TextEditingController(
+                                  text: (widget.companyData?['servicesPricing']
+                                              ?[service] ??
+                                          0)
+                                      .toString(),
+                                );
+                                await showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Update price for $service'),
+                                    content: TextField(
+                                      controller: controller,
+                                      keyboardType: TextInputType.number,
+                                      decoration: const InputDecoration(
+                                        prefixText: '\$',
+                                        hintText: 'Enter new price',
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          final newPrice =
+                                              double.tryParse(controller.text);
+                                          if (newPrice != null) {
+                                            _updateServicePrice(
+                                                service, newPrice);
+                                          }
+                                          Navigator.pop(context);
+                                        },
+                                        child: const Text('Update'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    )),
+                const SizedBox(height: 16),
+              ],
+            )),
+      ],
+    );
+  }
 
   Future<void> _signOut() async {
     bool? confirmLogout = await showDialog<bool>(
@@ -164,6 +363,8 @@ class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            _buildServicePricingSection(),
+            const SizedBox(height: 24),
             Text(
               'Completed Appointments (${completedAppointments.length})',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
@@ -193,6 +394,8 @@ class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard> {
                   ),
             ),
             ...customers
+                .where(
+                    (customerId) => customerId != null && customerId.isNotEmpty)
                 .map((customerId) => CustomerListItem(customerId: customerId)),
           ],
         ),

@@ -78,11 +78,17 @@ class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
                 }
 
                 final docs = snapshot.data!.docs.where((doc) {
-                  final company = InsuranceCompany.fromMap(
-                      doc.id, doc.data() as Map<String, dynamic>);
-                  return company.name
-                      .toLowerCase()
-                      .contains(_searchController.text.toLowerCase());
+                  try {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final company = InsuranceCompany.fromMap(doc.id, data);
+                    return company.name
+                        .toLowerCase()
+                        .contains(_searchController.text.toLowerCase());
+                  } catch (e) {
+                    print('Error parsing company data: $e');
+                    print('Document data: ${doc.data()}');
+                    return false;
+                  }
                 }).toList();
 
                 if (docs.isEmpty) {
@@ -94,28 +100,34 @@ class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
                   itemCount: docs.length,
                   itemBuilder: (context, index) {
                     final doc = docs[index];
-                    final company = InsuranceCompany.fromMap(
-                        doc.id, doc.data() as Map<String, dynamic>);
+                    try {
+                      final data = doc.data() as Map<String, dynamic>;
+                      final company = InsuranceCompany.fromMap(doc.id, data);
 
-                    return Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 8),
-                      child: ListTile(
-                        title: Text(company.name),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(company.location),
-                            if (company.description != null)
-                              Text(company.description!),
-                          ],
+                      return Card(
+                        margin: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: ListTile(
+                          title: Text(company.name),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(company.location),
+                              if (company.description != null)
+                                Text(company.description!),
+                            ],
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            onPressed: () => _deleteCompany(doc.id),
+                          ),
                         ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteCompany(doc.id),
-                        ),
-                      ),
-                    );
+                      );
+                    } catch (e) {
+                      print('Error parsing company data: $e');
+                      print('Document data: ${doc.data()}');
+                      return Container();
+                    }
                   },
                 );
               },
