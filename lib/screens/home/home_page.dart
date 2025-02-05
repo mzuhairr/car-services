@@ -5,6 +5,7 @@ import '../appointment/appointment_booking.dart';
 import '../../models/insurance_company.dart';
 import '../../services/firestore_service.dart';
 import '../adminpage/manage_users.dart';
+import '../adminpage/manage_companies.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key, required this.title});
@@ -93,15 +94,33 @@ class _HomePageState extends State<HomePage> {
                 .isUserAdmin(_authService.currentUser?.uid ?? ''),
             builder: (context, snapshot) {
               if (snapshot.data == true) {
-                return IconButton(
-                  icon: const Icon(Icons.admin_panel_settings),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (context) => ManageUsersPage()),
-                    );
-                  },
+                return PopupMenuButton(
+                  icon: const Icon(Icons.admin_panel_settings,
+                      color: Colors.white),
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      child: const Text('Manage Companies'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ManageCompaniesPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    PopupMenuItem(
+                      child: const Text('Manage Users'),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ManageUsersPage(),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 );
               }
               return const SizedBox.shrink();

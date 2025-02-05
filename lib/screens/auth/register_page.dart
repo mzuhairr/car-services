@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:dropdown_search/dropdown_search.dart';
 import '../../models/insurance_company.dart';
 import '../../services/firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -20,6 +22,8 @@ class _RegisterPageState extends State<RegisterPage> {
   final FirestoreService _firestoreService = FirestoreService();
   List<InsuranceCompany> insuranceCompanies = [];
   bool _isLoading = true;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  bool _isRegistering = false;
 
   @override
   void initState() {
@@ -37,6 +41,54 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       // Handle error
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _registerUser() async {
+    try {
+      setState(() => _isRegistering = true);
+
+      // Create user with email and password
+      final UserCredential userCredential =
+          await _auth.createUserWithEmailAndPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      // Save additional user data to Firestore
+      await _firestoreService.createNewUser({
+        'uid': userCredential.user!.uid,
+        'name': _nameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'insuranceCompanyId': selectedCompany!.id,
+        'isAdmin': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Registration successful!')),
+        );
+        Navigator.pop(context);
+      }
+    } on FirebaseAuthException catch (e) {
+      String errorMessage = 'Registration failed';
+      if (e.code == 'weak-password') {
+        errorMessage = 'The password provided is too weak';
+      } else if (e.code == 'email-already-in-use') {
+        errorMessage = 'An account already exists for this email';
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(errorMessage)),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('An error occurred during registration')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isRegistering = false);
+      }
     }
   }
 
@@ -148,25 +200,25 @@ class _RegisterPageState extends State<RegisterPage> {
                           backgroundColor: Colors.green,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        onPressed: () {
-                          if (_formKey.currentState!.validate() &&
-                              selectedCompany != null) {
-                            // TODO: Register user with selected company
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Registration successful!')),
-                            );
-                            Navigator.pop(context);
-                          } else if (selectedCompany == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text(
-                                      'Please select an insurance company')),
-                            );
-                          }
-                        },
-                        child: const Text('Register',
-                            style: TextStyle(color: Colors.white)),
+                        onPressed: _isRegistering
+                            ? null
+                            : () {
+                                if (_formKey.currentState!.validate() &&
+                                    selectedCompany != null) {
+                                  _registerUser();
+                                } else if (selectedCompany == null) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                        content: Text(
+                                            'Please select an insurance company')),
+                                  );
+                                }
+                              },
+                        child: _isRegistering
+                            ? const CircularProgressIndicator(
+                                color: Colors.white)
+                            : const Text('Register',
+                                style: TextStyle(color: Colors.white)),
                       ),
                     ),
                   ],

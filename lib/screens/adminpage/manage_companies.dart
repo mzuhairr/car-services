@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/firestore_service.dart';
 import '../../models/insurance_company.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ManageCompaniesPage extends StatefulWidget {
   const ManageCompaniesPage({super.key});
@@ -13,6 +13,7 @@ class ManageCompaniesPage extends StatefulWidget {
 class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
   final FirestoreService _firestoreService = FirestoreService();
   final _nameController = TextEditingController();
+  final _locationController = TextEditingController();
   final _descriptionController = TextEditingController();
 
   @override
@@ -24,36 +25,49 @@ class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddCompanyDialog,
+        backgroundColor: Colors.green,
         child: const Icon(Icons.add),
       ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection('insurance_companies')
+            .collection('InsuranceCompany')
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text('Something went wrong'));
+            return Center(child: Text('Error: ${snapshot.error}'));
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          final companies = snapshot.data!.docs
-              .map((doc) => InsuranceCompany.fromMap(
-                  doc.id, doc.data() as Map<String, dynamic>))
-              .toList();
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No insurance companies found'));
+          }
 
           return ListView.builder(
-            itemCount: companies.length,
+            itemCount: snapshot.data!.docs.length,
             itemBuilder: (context, index) {
-              final company = companies[index];
-              return ListTile(
-                title: Text(company.name),
-                subtitle: Text(company.description ?? ''),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete),
-                  onPressed: () => _deleteCompany(company.id!),
+              final doc = snapshot.data!.docs[index];
+              final company = InsuranceCompany.fromMap(
+                  doc.id, doc.data() as Map<String, dynamic>);
+
+              return Card(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: ListTile(
+                  title: Text(company.name),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(company.location),
+                      if (company.description != null)
+                        Text(company.description!),
+                    ],
+                  ),
+                  trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _deleteCompany(doc.id),
+                  ),
                 ),
               );
             },
@@ -64,22 +78,29 @@ class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
   }
 
   Future<void> _showAddCompanyDialog() async {
-    await showDialog(
+    return showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Add Insurance Company'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Company Name'),
-            ),
-            TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(labelText: 'Description'),
-            ),
-          ],
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(labelText: 'Company Name'),
+              ),
+              TextField(
+                controller: _locationController,
+                decoration: const InputDecoration(labelText: 'Location'),
+              ),
+              TextField(
+                controller: _descriptionController,
+                decoration: const InputDecoration(labelText: 'Description'),
+                maxLines: 3,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -88,16 +109,22 @@ class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
           ),
           TextButton(
             onPressed: () async {
-              await _firestoreService.addInsuranceCompany(
-                InsuranceCompany(
-                  name: _nameController.text,
-                  description: _descriptionController.text,
-                  location: 'Khartoum',
-                ),
-              );
-              Navigator.pop(context);
-              _nameController.clear();
-              _descriptionController.clear();
+              if (_nameController.text.isNotEmpty &&
+                  _locationController.text.isNotEmpty) {
+                await _firestoreService.addInsuranceCompany(
+                  InsuranceCompany(
+                    name: _nameController.text,
+                    location: _locationController.text,
+                    description: _descriptionController.text,
+                  ),
+                );
+                if (mounted) {
+                  Navigator.pop(context);
+                  _nameController.clear();
+                  _locationController.clear();
+                  _descriptionController.clear();
+                }
+              }
             },
             child: const Text('Add'),
           ),
@@ -107,9 +134,30 @@ class _ManageCompaniesPageState extends State<ManageCompaniesPage> {
   }
 
   Future<void> _deleteCompany(String id) async {
-    await FirebaseFirestore.instance
-        .collection('insurance_companies')
-        .doc(id)
-        .delete();
+    // Add confirmation dialog
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Delete'),
+        content: const Text('Are you sure you want to delete this company?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await FirebaseFirestore.instance
+          .collection('InsuranceCompany')
+          .doc(id)
+          .delete();
+    }
   }
 }

@@ -1,16 +1,20 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class UserModel {
   final String uid;
   final String email;
   final String name;
   final bool isAdmin;
-  final String? insuranceCompanyId;
+  final String insuranceCompanyId;
+  final DateTime? createdAt;
 
   UserModel({
     required this.uid,
     required this.email,
     required this.name,
+    required this.insuranceCompanyId,
     this.isAdmin = false,
-    this.insuranceCompanyId,
+    this.createdAt,
   });
 
   Map<String, dynamic> toMap() {
@@ -18,8 +22,9 @@ class UserModel {
       'uid': uid,
       'email': email,
       'name': name,
-      'isAdmin': isAdmin,
       'insuranceCompanyId': insuranceCompanyId,
+      'isAdmin': isAdmin,
+      'createdAt': createdAt ?? FieldValue.serverTimestamp(),
     };
   }
 
@@ -28,8 +33,9 @@ class UserModel {
       uid: map['uid'] ?? '',
       email: map['email'] ?? '',
       name: map['name'] ?? '',
+      insuranceCompanyId: map['insuranceCompanyId'] ?? '',
       isAdmin: map['isAdmin'] ?? false,
-      insuranceCompanyId: map['insuranceCompanyId'],
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate(),
     );
   }
 }

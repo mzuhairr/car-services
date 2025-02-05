@@ -39,16 +39,14 @@ class FirestoreService {
     await _firestore.collection('users').doc(uid).update({'isAdmin': isAdmin});
   }
 
-  Future<void> createNewUser({
-    required String uid,
-    required String email,
-    required String name,
-  }) async {
+  Future<void> createNewUser(Map<String, dynamic> userData) async {
     final UserModel newUser = UserModel(
-      uid: uid,
-      email: email,
-      name: name,
-      isAdmin: false, // Default value for new users
+      uid: userData['uid'],
+      email: userData['email'],
+      name: userData['name'],
+      insuranceCompanyId: userData['insuranceCompanyId'],
+      isAdmin: false,
+      createdAt: DateTime.now(),
     );
 
     await createUser(newUser);
