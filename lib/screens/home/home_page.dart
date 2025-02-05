@@ -20,6 +20,7 @@ class _HomePageState extends State<HomePage> {
   final _authService = AuthService();
   late InsuranceCompany userInsuranceCompany;
   final _firestoreService = FirestoreService();
+  bool _isDarkMode = true;
 
   @override
   void initState() {
@@ -30,14 +31,20 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _loadInsuranceData() async {
-    // TODO: Load actual insurance data from your auth service or API
-    // For now using placeholder data
-    setState(() {
-      userInsuranceCompany = InsuranceCompany(
-          name: 'Sample Insurance Co',
-          location: 'New York, NY',
-          description: 'Your trusted insurance provider');
-    });
+    try {
+      final userId = _authService.currentUser?.uid;
+      if (userId != null) {
+        final company = await _firestoreService.getUserInsuranceCompany(userId);
+        if (company != null) {
+          setState(() {
+            userInsuranceCompany = company;
+          });
+        }
+      }
+    } catch (e) {
+      // Handle error - you might want to show a snackbar or dialog
+      debugPrint('Error loading insurance data: $e');
+    }
   }
 
   // Car service categories with their specific services
@@ -69,19 +76,49 @@ class _HomePageState extends State<HomePage> {
   };
 
   Future<void> _signOut() async {
-    await _authService.signOut();
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginPage()),
-      );
+    // Show confirmation dialog
+    bool? confirmLogout = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Confirm Logout'),
+          content: const Text('Are you sure you want to logout?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Logout'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Proceed with logout if confirmed
+    if (confirmLogout == true) {
+      await _authService.signOut();
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginPage()),
+        );
+      }
     }
+  }
+
+  void _toggleTheme() {
+    setState(() {
+      _isDarkMode = !_isDarkMode;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: _isDarkMode ? Colors.black : Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.green,
         title: Text(
@@ -89,14 +126,20 @@ class _HomePageState extends State<HomePage> {
           style: const TextStyle(color: Colors.white),
         ),
         actions: [
+          IconButton(
+            icon: Icon(
+              _isDarkMode ? Icons.light_mode : Icons.dark_mode,
+              color: Colors.white,
+            ),
+            onPressed: _toggleTheme,
+          ),
           FutureBuilder<bool>(
             future: _firestoreService
                 .isUserAdmin(_authService.currentUser?.uid ?? ''),
             builder: (context, snapshot) {
               if (snapshot.data == true) {
                 return PopupMenuButton(
-                  icon: const Icon(Icons.admin_panel_settings,
-                      color: Colors.white),
+                  icon: const Icon(Icons.more_vert, color: Colors.white),
                   itemBuilder: (context) => [
                     PopupMenuItem(
                       child: const Text('Manage Companies'),
@@ -120,15 +163,23 @@ class _HomePageState extends State<HomePage> {
                         );
                       },
                     ),
+                    PopupMenuItem(
+                      child: const Text('Logout'),
+                      onTap: () => _signOut(),
+                    ),
                   ],
                 );
               }
-              return const SizedBox.shrink();
+              return PopupMenuButton(
+                icon: const Icon(Icons.more_vert, color: Colors.white),
+                itemBuilder: (context) => [
+                  PopupMenuItem(
+                    child: const Text('Logout'),
+                    onTap: () => _signOut(),
+                  ),
+                ],
+              );
             },
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: _signOut,
           ),
         ],
       ),
@@ -138,7 +189,7 @@ class _HomePageState extends State<HomePage> {
             padding: const EdgeInsets.all(16),
             margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: _isDarkMode ? Colors.grey[900] : Colors.white,
               borderRadius: BorderRadius.circular(10),
               border: Border.all(color: Colors.green, width: 2),
             ),
@@ -156,28 +207,30 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 8),
                 Text(
                   userInsuranceCompany.name,
-                  style: const TextStyle(
-                    color: Colors.black,
+                  style: TextStyle(
+                    color: _isDarkMode ? Colors.white : Colors.black,
                     fontSize: 16,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  userInsuranceCompany.location,
-                  style: const TextStyle(
-                    color: Colors.black87,
-                    fontSize: 14,
-                  ),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on,
+                      size: 16,
+                      color: Colors.green,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      userInsuranceCompany.location,
+                      style: TextStyle(
+                        color: _isDarkMode ? Colors.white70 : Colors.black87,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                // Text(
-                //   userInsuranceCompany.description,
-                //   style: const TextStyle(
-                //     color: Colors.black87,
-                //     fontSize: 14,
-                //   ),
-                // ),
               ],
             ),
           ),
@@ -223,6 +276,7 @@ class _HomePageState extends State<HomePage> {
                       itemBuilder: (context, serviceIndex) {
                         return Card(
                           elevation: 4,
+                          color: _isDarkMode ? Colors.grey[850] : Colors.white,
                           child: InkWell(
                             onTap: () {
                               Navigator.push(
@@ -241,7 +295,9 @@ class _HomePageState extends State<HomePage> {
                             child: Container(
                               padding: const EdgeInsets.all(8),
                               decoration: BoxDecoration(
-                                color: Colors.white,
+                                color: _isDarkMode
+                                    ? Colors.grey[850]
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               child: Column(
@@ -250,14 +306,18 @@ class _HomePageState extends State<HomePage> {
                                   Icon(
                                     _getIconForService(services[serviceIndex]),
                                     size: 32,
-                                    color: Colors.green,
+                                    color: _isDarkMode
+                                        ? Colors.white
+                                        : Colors.green,
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
                                     services[serviceIndex],
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      color: Colors.black,
+                                    style: TextStyle(
+                                      color: _isDarkMode
+                                          ? Colors.white
+                                          : Colors.black,
                                       fontSize: 14,
                                       fontWeight: FontWeight.w500,
                                     ),

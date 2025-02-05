@@ -23,11 +23,12 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text.trim(),
       );
       if (mounted) {
+        final userData = await _authService.getUserData();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
               builder: (context) =>
-                  const HomePage(title: 'Flutter Demo Home Page')),
+                  HomePage(title: 'Welcome ${userData?['name'] ?? 'User'}')),
         );
       }
     } catch (e) {
@@ -43,11 +44,12 @@ class _LoginPageState extends State<LoginPage> {
     try {
       await _authService.signInWithGoogle();
       if (mounted) {
+        final userData = await _authService.getUserData();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
             builder: (context) =>
-                const HomePage(title: 'Flutter Demo Home Page'),
+                HomePage(title: 'Welcome ${userData?['name'] ?? 'User'}'),
           ),
         );
       }

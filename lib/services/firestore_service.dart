@@ -51,4 +51,26 @@ class FirestoreService {
 
     await createUser(newUser);
   }
+
+  Future<InsuranceCompany?> getUserInsuranceCompany(String userId) async {
+    final userDoc =
+        await FirebaseFirestore.instance.collection('users').doc(userId).get();
+    final companyId = userDoc.data()?['insuranceCompanyId'];
+
+    if (companyId != null) {
+      final companyDoc = await FirebaseFirestore.instance
+          .collection('InsuranceCompany')
+          .doc(companyId)
+          .get();
+
+      if (companyDoc.exists) {
+        return InsuranceCompany(
+          name: companyDoc.data()?['name'] ?? 'Unknown',
+          location: companyDoc.data()?['location'] ?? 'Unknown',
+          description: companyDoc.data()?['description'] ?? '',
+        );
+      }
+    }
+    return null;
+  }
 }
