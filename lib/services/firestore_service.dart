@@ -71,13 +71,30 @@ class FirestoreService {
           .get();
 
       if (companyDoc.exists) {
-        return InsuranceCompany(
-          name: companyDoc.data()?['name'] ?? 'Unknown',
-          location: companyDoc.data()?['location'] ?? 'Unknown',
-          description: companyDoc.data()?['description'] ?? '',
-        );
+        return InsuranceCompany.fromMap(companyId, companyDoc.data() ?? {});
       }
     }
     return null;
+  }
+
+  // Add this method to FirestoreService class
+  Stream<List<Map<String, dynamic>>> getAllAppointments() {
+    return _firestore
+        .collection('Appointments')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => {
+                  ...doc.data(),
+                  'id': doc.id,
+                })
+            .toList());
+  }
+
+  Future<void> updateAppointmentStatus(
+      String appointmentId, String status) async {
+    await _firestore
+        .collection('Appointments')
+        .doc(appointmentId)
+        .update({'status': status});
   }
 }

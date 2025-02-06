@@ -3,7 +3,7 @@ class InsuranceCompany {
   final String name;
   final String? description;
   final String location;
-  final Map<String, Map<String, double>> servicesPricing;
+  final Map<String, double> servicesPricing;
   final List<String>? customers;
   final List<Appointment>? appointments;
 
@@ -12,7 +12,7 @@ class InsuranceCompany {
     required this.name,
     this.description,
     required this.location,
-    this.servicesPricing = const {},
+    this.servicesPricing = const <String, double>{},
     this.customers,
     this.appointments,
   });
@@ -24,18 +24,27 @@ class InsuranceCompany {
       'location': location,
       'servicesPricing': servicesPricing,
       'customers': customers,
-      'appointments': appointments,
+      'appointments': appointments?.map((a) => a.toMap()).toList(),
     };
   }
 
   factory InsuranceCompany.fromMap(String id, Map<String, dynamic> map) {
+    Map<String, double> pricing = {};
+    if (map['servicesPricing'] != null) {
+      final pricingData = map['servicesPricing'] as Map<String, dynamic>;
+      pricingData.forEach((key, value) {
+        if (value is num) {
+          pricing[key] = value.toDouble();
+        }
+      });
+    }
+
     return InsuranceCompany(
       id: id,
       name: map['name'] ?? '',
       description: map['description'],
       location: map['location'] ?? '',
-      servicesPricing:
-          Map<String, Map<String, double>>.from(map['servicesPricing'] ?? {}),
+      servicesPricing: pricing,
     );
   }
 }
@@ -56,6 +65,17 @@ class Appointment {
     this.insuranceCompanyId,
     this.userId,
   });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'date': date,
+      'time': time,
+      'description': description,
+      'isCompleted': isCompleted,
+      'insuranceCompanyId': insuranceCompanyId,
+      'userId': userId,
+    };
+  }
 
   factory Appointment.fromMap(Map<String, dynamic> map) {
     return Appointment(

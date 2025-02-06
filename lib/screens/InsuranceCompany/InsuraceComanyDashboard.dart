@@ -394,8 +394,7 @@ class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard> {
                   ),
             ),
             ...customers
-                .where(
-                    (customerId) => customerId != null && customerId.isNotEmpty)
+                .where((customerId) => customerId.isNotEmpty)
                 .map((customerId) => CustomerListItem(customerId: customerId)),
           ],
         ),
