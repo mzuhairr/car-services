@@ -210,55 +210,110 @@ class _HomePageState extends State<HomePage> {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: snapshot.data!.length,
-          itemBuilder: (context, index) {
-            final appointment = snapshot.data![index];
-            return Card(
-              color: _isDarkMode ? Colors.grey[850] : Colors.white,
-              margin: const EdgeInsets.only(bottom: 16),
-              child: ListTile(
-                title: Text(
-                  'Service: ${appointment['serviceName']}',
+        final pendingAppointments = snapshot.data!
+            .where((appointment) => appointment['status'] == 'pending')
+            .toList();
+        final completedAppointments = snapshot.data!
+            .where((appointment) => appointment['status'] == 'completed')
+            .toList();
+
+        return SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Pending Appointments',
                   style: TextStyle(
-                    color: _isDarkMode ? Colors.white : Colors.black,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
+                    color: _isDarkMode ? Colors.white : Colors.black,
                   ),
                 ),
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Company: ${appointment['companyName']}\n'
-                      'Date: ${appointment['date']}\n'
-                      'Time: ${appointment['time']}\n'
-                      'Status: ${appointment['status']}',
-                      style: TextStyle(
-                        color: _isDarkMode ? Colors.white70 : Colors.black87,
-                      ),
-                    ),
-                  ],
+                const SizedBox(height: 8),
+                _buildAppointmentsList(pendingAppointments, true),
+                const SizedBox(height: 24),
+                Text(
+                  'Completed Appointments',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: _isDarkMode ? Colors.white : Colors.black,
+                  ),
                 ),
-                trailing: appointment['status'] == 'pending'
-                    ? ElevatedButton(
-                        onPressed: () =>
-                            _updateAppointmentStatus(appointment['id']),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
-                        child: const Text(
-                          'Complete',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      )
-                    : const Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                      ),
+                const SizedBox(height: 8),
+                _buildAppointmentsList(completedAppointments, false),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildAppointmentsList(List<dynamic> appointments, bool isPending) {
+    if (appointments.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(
+          'No ${isPending ? 'pending' : 'completed'} appointments',
+          style: TextStyle(
+            color: _isDarkMode ? Colors.white70 : Colors.black54,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      );
+    }
+
+    return ListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: appointments.length,
+      itemBuilder: (context, index) {
+        final appointment = appointments[index];
+        return Card(
+          color: _isDarkMode ? Colors.grey[850] : Colors.white,
+          margin: const EdgeInsets.only(bottom: 16),
+          child: ListTile(
+            title: Text(
+              'Service: ${appointment['serviceName']}',
+              style: TextStyle(
+                color: _isDarkMode ? Colors.white : Colors.black,
+                fontWeight: FontWeight.bold,
               ),
-            );
-          },
+            ),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Company: ${appointment['companyName']}\n'
+                  'Date: ${appointment['date']}\n'
+                  'Time: ${appointment['time']}\n'
+                  'Status: ${appointment['status']}',
+                  style: TextStyle(
+                    color: _isDarkMode ? Colors.white70 : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            trailing: isPending
+                ? ElevatedButton(
+                    onPressed: () =>
+                        _updateAppointmentStatus(appointment['id']),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                    ),
+                    child: const Text(
+                      'Complete',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  )
+                : const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                  ),
+          ),
         );
       },
     );

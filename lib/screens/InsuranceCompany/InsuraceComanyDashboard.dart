@@ -90,15 +90,24 @@ class InsuranceCompanyDashboard extends StatefulWidget {
       _InsuranceCompanyDashboardState();
 }
 
-class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard> {
+class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard>
+    with SingleTickerProviderStateMixin {
   final _authService = AuthService();
   bool _isDarkMode = true;
   late Map<String, dynamic> _companyData;
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
     _companyData = Map<String, dynamic>.from(widget.companyData ?? {});
+    _tabController = TabController(length: 3, vsync: this);
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
   }
 
   final Map<String, List<String>> carServices = {
@@ -290,6 +299,64 @@ class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard> {
     );
   }
 
+  Widget _buildAppointmentsSection() {
+    final appointments =
+        (widget.companyData?['appointments'] as List<dynamic>?) ?? [];
+    final completedAppointments =
+        appointments.where((a) => a['isCompleted'] == true).toList();
+    final pendingAppointments =
+        appointments.where((a) => a['isCompleted'] == false).toList();
+
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          labelColor: _isDarkMode ? Colors.white : Colors.black87,
+          tabs: const [
+            Tab(text: 'All'),
+            Tab(text: 'Pending'),
+            Tab(text: 'Completed'),
+          ],
+        ),
+        SizedBox(
+          height: 300, // Adjust height as needed
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              // All Appointments
+              ListView(
+                children: [
+                  ...appointments.map((appointment) => AppointmentCard(
+                        appointment: appointment,
+                        isCompleted: appointment['isCompleted'] ?? false,
+                      )),
+                ],
+              ),
+              // Pending Appointments
+              ListView(
+                children: [
+                  ...pendingAppointments.map((appointment) => AppointmentCard(
+                        appointment: appointment,
+                        isCompleted: false,
+                      )),
+                ],
+              ),
+              // Completed Appointments
+              ListView(
+                children: [
+                  ...completedAppointments.map((appointment) => AppointmentCard(
+                        appointment: appointment,
+                        isCompleted: true,
+                      )),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<void> _signOut() async {
     bool? confirmLogout = await showDialog<bool>(
       context: context,
@@ -330,15 +397,6 @@ class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final appointments =
-        (widget.companyData?['appointments'] as List<dynamic>?) ?? [];
-    final completedAppointments =
-        appointments.where((a) => a['isCompleted'] == true).toList();
-    final pendingAppointments =
-        appointments.where((a) => a['isCompleted'] == false).toList();
-    final customers =
-        (widget.companyData?['customers'] as List<dynamic>?) ?? [];
-
     return Scaffold(
       backgroundColor: _isDarkMode ? Colors.grey[900] : Colors.white,
       appBar: AppBar(
@@ -366,34 +424,21 @@ class _InsuranceCompanyDashboardState extends State<InsuranceCompanyDashboard> {
             _buildServicePricingSection(),
             const SizedBox(height: 24),
             Text(
-              'Completed Appointments (${completedAppointments.length})',
+              'Appointments',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: _isDarkMode ? Colors.white : Colors.black87,
                   ),
             ),
-            ...completedAppointments.map((appointment) => AppointmentCard(
-                  appointment: appointment,
-                  isCompleted: true,
-                )),
+            const SizedBox(height: 16),
+            _buildAppointmentsSection(),
             const SizedBox(height: 24),
             Text(
-              'Pending Appointments (${pendingAppointments.length})',
+              'Customers',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: _isDarkMode ? Colors.white : Colors.black87,
                   ),
             ),
-            ...pendingAppointments.map((appointment) => AppointmentCard(
-                  appointment: appointment,
-                  isCompleted: false,
-                )),
-            const SizedBox(height: 24),
-            Text(
-              'Customers (${customers.length})',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: _isDarkMode ? Colors.white : Colors.black87,
-                  ),
-            ),
-            ...customers
+            ...((widget.companyData?['customers'] as List<dynamic>?) ?? [])
                 .where((customerId) => customerId.isNotEmpty)
                 .map((customerId) => CustomerListItem(customerId: customerId)),
           ],
